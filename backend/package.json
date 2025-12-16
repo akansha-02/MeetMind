@@ -1,0 +1,40 @@
+{
+  "name": "meetmind-backend",
+  "version": "1.0.0",
+  "description": "Backend for AI-powered meeting assistant",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "meeting",
+    "ai",
+    "transcription",
+    "assistant"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@deepgram/sdk": "^3.4.1",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.3",
+    "multer": "^2.0.2",
+    "node-cron": "^3.0.3",
+    "openai": "^4.20.1",
+    "socket.io": "^4.6.1",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.1"
+  }
+}
