@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { knowledgeBaseAPI } from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
 import toast from 'react-hot-toast';

@@ -17,27 +17,33 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
-      // Verify token is still valid
-      authAPI.getMe()
-        .then((res) => {
+    const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (token && storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+          // Verify token is still valid
+          const res = await authAPI.getMe();
           setUser(res.data);
           localStorage.setItem('user', JSON.stringify(res.data));
-        })
-        .catch(() => {
+        } catch (error) {
+          // Token is invalid, clear storage
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
+        }
+      }
       setLoading(false);
-    }
+    };
+
+    initAuth().catch(() => {
+      // If initialization fails completely, still set loading to false
+      setLoading(false);
+    });
   }, []);
+
 
   const login = async (email, password) => {
     try {

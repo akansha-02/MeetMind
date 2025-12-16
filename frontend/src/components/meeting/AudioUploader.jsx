@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { transcriptsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 

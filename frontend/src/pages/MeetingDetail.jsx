@@ -1,3 +1,4 @@
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import { MeetingDashboard } from '../components/meeting/MeetingDashboard';
 import { ActionItemsList } from '../components/tasks/ActionItemsList';

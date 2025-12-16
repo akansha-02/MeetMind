@@ -14,10 +14,14 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const auth = useAuth(); // Get the whole auth object first
+  const { isAuthenticated } = auth || {}; // Handle undefined gracefully
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
+    // Only proceed if auth is ready (not loading)
+    if (auth?.loading) return;
+
     if (isAuthenticated) {
       const token = localStorage.getItem('token');
       const newSocket = connectSocket(token);
@@ -31,7 +35,7 @@ export const SocketProvider = ({ children }) => {
       disconnectSocket();
       setSocket(null);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, auth?.loading]);
 
   return (
     <SocketContext.Provider value={{ socket }}>

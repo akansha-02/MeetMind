@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { meetingsAPI } from '../services/api';
 import { formatDate } from '../utils/formatDate';
 import { Loading } from '../components/shared/Loading';
@@ -10,6 +10,7 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [newMeetingTitle, setNewMeetingTitle] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadMeetings();
@@ -41,7 +42,7 @@ export const Dashboard = () => {
       setNewMeetingTitle('');
       loadMeetings();
       // Navigate to the new meeting
-      window.location.href = `/meetings/${response.data._id}`;
+      navigate(`/meetings/${response.data._id}`);
     } catch (error) {
       toast.error('Failed to create meeting');
     }

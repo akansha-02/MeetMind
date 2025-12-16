@@ -33,7 +33,7 @@ const PublicRoute = ({ children }) => {
     return <Loading />;
   }
 
-  return !isAuthenticated ? children : <Navigate to="/dashboard" />;
+  return !isAuthenticated ? children : <Navigate to="/dashboard"/>;
 };
 
 const AppContent = () => {
