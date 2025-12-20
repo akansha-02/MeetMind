@@ -22,7 +22,7 @@ export const SearchContext = ({ onSelectMeeting }) => {
       setResults(response.data.results || []);
       
       if (response.data.results.length === 0) {
-        toast.info('No results found');
+        toast('No results found');
       }
     } catch (error) {
       toast.error('Search failed');
@@ -39,7 +39,7 @@ export const SearchContext = ({ onSelectMeeting }) => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search past meetings and discussions..."
+          placeholder="Search KB (e.g., ‘action items’, ‘title: Sprint Review’, ‘meeting: 674...’)"
           className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
         <button

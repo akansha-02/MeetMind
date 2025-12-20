@@ -10,15 +10,17 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { initializeSocket } from './socket/socketHandler.js';
 import reminderService from './services/reminderService.js';
 
+
 // Import routes
 import authRoutes from './routes/auth.js';
 import meetingRoutes from './routes/meetings.js';
 import transcriptRoutes from './routes/transcripts.js';
 import actionItemRoutes from './routes/actionItems.js';
 import knowledgeBaseRoutes from './routes/knowledgeBase.js';
+import summarizeRoutes from './routes/summarize.js';
 
-// // Load environment variables
-// dotenv.config();
+// Load environment variables before anything uses process.env
+dotenv.config();
 
 // Connect to database
 connectDB();
@@ -51,6 +53,7 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/transcripts', transcriptRoutes);
 app.use('/api/action-items', actionItemRoutes);
 app.use('/api/knowledge-base', knowledgeBaseRoutes);
+app.use('/api/summarize', summarizeRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

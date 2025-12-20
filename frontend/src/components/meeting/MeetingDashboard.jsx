@@ -78,13 +78,18 @@ export const MeetingDashboard = ({ meetingId }) => {
     };
   }, [cleanup]);
 
+  const handleSummaryUpdate = (newSummary) => {
+    // Refresh the meeting data to reflect the new summary
+    window.location.reload();
+  };
+
   if (loading) {
     return <div className="flex justify-center p-8">Loading meeting...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <MeetingSummary meeting={meeting} />
+      <MeetingSummary meeting={meeting} onSummaryUpdate={handleSummaryUpdate} />
       
       {meeting?.status === 'active' && (
         <>

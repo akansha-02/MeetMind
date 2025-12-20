@@ -6,9 +6,11 @@ import {
   updateMeeting,
   deleteMeeting,
   completeMeeting,
+  regenerateSummary,
 } from '../controllers/meetingController.js';
 import { processMeeting } from '../controllers/aiController.js';
 import { protect } from '../middleware/auth.js';
+import { generateMeetingSummaryOnly } from '../controllers/meetingController.js';
 
 const router = express.Router();
 
@@ -26,5 +28,6 @@ router.route('/:id')
 
 router.post('/:id/complete', completeMeeting);
 router.post('/:id/process', processMeeting);
+router.post('/:id/summary', regenerateSummary);
 
 export default router;

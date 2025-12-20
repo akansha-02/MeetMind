@@ -13,6 +13,14 @@ export const validateAudioFile = (file) => {
     'audio/webm',
     'audio/ogg',
     'audio/m4a',
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/x-matroska',
+    'video/ogg',
+    'video/3gpp',
+    'video/mpeg',
   ];
   
   const maxSize = 100 * 1024 * 1024; // 100MB
@@ -22,7 +30,7 @@ export const validateAudioFile = (file) => {
   }
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return { valid: false, error: 'Invalid audio file type' };
+    return { valid: false, error:'Invalid file type. Only audio and video files are supported.' };
   }
 
   if (file.size > maxSize) {
@@ -40,6 +48,14 @@ export const getAudioFileExtension = (mimetype) => {
     'audio/webm': '.webm',
     'audio/ogg': '.ogg',
     'audio/m4a': '.m4a',
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+    'video/quicktime': '.mov',
+    'video/x-msvideo': '.avi',
+    'video/x-matroska': '.mkv',
+    'video/ogg': '.ogv',
+    'video/3gpp': '.3gp',
+    'video/mpeg': '.mpeg',
   };
   return extensions[mimetype] || '.mp3';
 };

@@ -41,6 +41,17 @@ const meetingSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    participants: [
+      {
+        email: { type: String, required: true, trim: true },
+        name: { type: String, trim: true },
+        status: {
+          type: String,
+          enum: ['invited', 'accepted', 'declined'],
+          default: 'invited',
+        },
+      },
+    ],
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

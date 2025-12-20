@@ -1,5 +1,7 @@
 import KnowledgeBase from '../models/KnowledgeBase.js';
 import openaiService from './openaiService.js';
+import mongoose from 'mongoose';
+import Meeting from '../models/Meeting.js';
 
 class VectorService {
   // Store content with embedding
@@ -25,10 +27,57 @@ class VectorService {
     }
   }
 
-  // Semantic search using MongoDB Atlas Vector Search
+  // Semantic + structured search
   async searchSimilar(userId, query, limit = 10, filters = {}) {
     try {
-      // Generate embedding for query
+      // 1) Structured search shortcuts
+      const titleMatch = query.match(/^title:\s*(.+)$/i);
+      if (titleMatch) {
+        const title = titleMatch[1].trim();
+        const results = await KnowledgeBase.find({
+          userId,
+          'metadata.title': new RegExp(title, 'i'),
+        })
+          .sort({ createdAt: -1 })
+          .limit(limit)
+          .populate('meetingId')
+          .lean();
+
+        return results.map((result) => ({
+          _id: result._id,
+          content: result.content,
+          contentType: result.contentType,
+          metadata: result.metadata,
+          meeting: result.meetingId,
+          score: 1.0,
+          createdAt: result.createdAt,
+        }));
+      }
+
+      const idMatch = query.match(/^(id|meeting):\s*(.+)$/i);
+      if (idMatch) {
+        const id = idMatch[2].trim();
+        const meetingId = mongoose.Types.ObjectId.isValid(id)
+          ? new mongoose.Types.ObjectId(id)
+          : id;
+        const results = await KnowledgeBase.find({ userId, meetingId })
+          .sort({ createdAt: -1 })
+          .limit(limit)
+          .populate('meetingId')
+          .lean();
+
+        return results.map((result) => ({
+          _id: result._id,
+          content: result.content,
+          contentType: result.contentType,
+          metadata: result.metadata,
+          meeting: result.meetingId,
+          score: 1.0,
+          createdAt: result.createdAt,
+        }));
+      }
+
+      // 2) Semantic search using MongoDB Atlas Vector Search
       const queryEmbedding = await openaiService.generateEmbedding(query);
 
       // Build filter object
@@ -38,6 +87,9 @@ class VectorService {
       }
       if (filters.contentType) {
         matchFilter.contentType = filters.contentType;
+      }
+      if (filters.title) {
+        matchFilter['metadata.title'] = new RegExp(filters.title, 'i');
       }
       if (filters.startDate || filters.endDate) {
         matchFilter.createdAt = {};
@@ -49,9 +101,6 @@ class VectorService {
         }
       }
 
-      // MongoDB Atlas Vector Search aggregation pipeline
-      // Note: This assumes a vector search index is created in MongoDB Atlas
-      // The index should be named "vector_index" on the "embedding" field
       const pipeline = [
         {
           $vectorSearch: {
@@ -62,20 +111,10 @@ class VectorService {
             limit: limit,
           },
         },
-        {
-          $match: matchFilter,
-        },
-        {
-          $addFields: {
-            score: { $meta: 'vectorSearchScore' },
-          },
-        },
-        {
-          $sort: { score: -1 },
-        },
-        {
-          $limit: limit,
-        },
+        { $match: matchFilter },
+        { $addFields: { score: { $meta: 'vectorSearchScore' } } },
+        { $sort: { score: -1 } },
+        { $limit: limit },
         {
           $lookup: {
             from: 'meetings',
@@ -84,18 +123,12 @@ class VectorService {
             as: 'meeting',
           },
         },
-        {
-          $unwind: {
-            path: '$meeting',
-            preserveNullAndEmptyArrays: true,
-          },
-        },
+        { $unwind: { path: '$meeting', preserveNullAndEmptyArrays: true } },
       ];
 
-      // Execute search
       const results = await KnowledgeBase.aggregate(pipeline);
 
-      return results.map(result => ({
+      return results.map((result) => ({
         _id: result._id,
         content: result.content,
         contentType: result.contentType,
@@ -106,7 +139,6 @@ class VectorService {
       }));
     } catch (error) {
       console.error('Vector search error:', error);
-      // Fallback to text-based search if vector search is not available
       return this.fallbackTextSearch(userId, query, limit, filters);
     }
   }
@@ -114,13 +146,25 @@ class VectorService {
   // Fallback text search if vector search is not configured
   async fallbackTextSearch(userId, query, limit = 10, filters = {}) {
     try {
-      const matchFilter = { userId, content: { $regex: query, $options: 'i' } };
-      
-      if (filters.meetingId) {
-        matchFilter.meetingId = filters.meetingId;
+      // Structured title/id shortcuts
+      const titleMatch = query.match(/^title:\s*(.+)$/i);
+      const idMatch = query.match(/^(id|meeting):\s*(.+)$/i);
+
+      const matchFilter = { userId };
+      if (titleMatch) {
+        matchFilter['metadata.title'] = new RegExp(titleMatch[1].trim(), 'i');
+      } else if (!idMatch) {
+        matchFilter.content = { $regex: query, $options: 'i' };
       }
-      if (filters.contentType) {
-        matchFilter.contentType = filters.contentType;
+
+      if (filters.meetingId) matchFilter.meetingId = filters.meetingId;
+      if (filters.contentType) matchFilter.contentType = filters.contentType;
+
+      if (idMatch) {
+        const id = idMatch[2].trim();
+        matchFilter.meetingId = mongoose.Types.ObjectId.isValid(id)
+          ? new mongoose.Types.ObjectId(id)
+          : id;
       }
 
       const results = await KnowledgeBase.find(matchFilter)
@@ -129,13 +173,13 @@ class VectorService {
         .populate('meetingId')
         .lean();
 
-      return results.map(result => ({
+      return results.map((result) => ({
         _id: result._id,
         content: result.content,
         contentType: result.contentType,
         metadata: result.metadata,
         meeting: result.meetingId,
-        score: 0.5, // Default score for text search
+        score: 0.5,
         createdAt: result.createdAt,
       }));
     } catch (error) {
@@ -147,12 +191,15 @@ class VectorService {
   // Store multiple content items for a meeting
   async storeMeetingContent(meetingId, userId, transcript, summary, minutes, actionItems = []) {
     try {
+      const meeting = await Meeting.findById(meetingId).lean();
+      const title = meeting?.title || 'Meeting';
       const operations = [];
 
       if (transcript) {
         operations.push(
           this.storeContent(meetingId, userId, transcript, 'transcript', {
             type: 'full_transcript',
+            title,
           })
         );
       }
@@ -161,6 +208,7 @@ class VectorService {
         operations.push(
           this.storeContent(meetingId, userId, summary, 'summary', {
             type: 'meeting_summary',
+            title,
           })
         );
       }
@@ -169,11 +217,11 @@ class VectorService {
         operations.push(
           this.storeContent(meetingId, userId, minutes, 'minutes', {
             type: 'meeting_minutes',
+            title,
           })
         );
       }
 
-      // Store action items
       for (const item of actionItems) {
         const actionItemText = `${item.title}${item.description ? ': ' + item.description : ''}`;
         operations.push(
@@ -182,6 +230,7 @@ class VectorService {
             assignee: item.assignee,
             dueDate: item.dueDate,
             priority: item.priority,
+            title,
           })
         );
       }

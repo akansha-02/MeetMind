@@ -14,7 +14,7 @@ class DeepgramService {
         model = 'nova-2',
         punctuate = true,
         diarize = false,
-        paragraphs = false,
+        paragraphs = true,
       } = options;
 
       // Read file as buffer
@@ -35,22 +35,32 @@ class DeepgramService {
         throw new Error(error.message);
       }
 
-      if (result?.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
-        return {
-          transcript: result.results.channels[0].alternatives[0].transcript,
-          confidence: result.results.channels[0].alternatives[0].confidence,
-          language: result.results.language || language,
-          metadata: result.metadata,
-        };
+      let fullTranscript = '';
+      if (result?.results?.channels?.[0]?.alternatives?.[0]) {
+        const alternative = result.results.channels[0].alternatives[0];
+        
+        // Use paragraphs if available, otherwise use transcript
+        if (result.results.channels[0].paragraphs?.transcript) {
+          fullTranscript = result.results.channels[0].paragraphs.transcript;
+        } else if (alternative.transcript) {
+          fullTranscript = alternative.transcript;
+        }
       }
 
-      return { transcript: '', confidence: 0, language };
+      return {
+        transcript: fullTranscript,
+        confidence: result?.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0,
+        language: result?.results?.language || language,
+        metadata: result?.metadata || {},
+      };
     } catch (error) {
       console.error('Deepgram transcription error:', error);
       throw new Error(`Transcription failed: ${error.message}`);
     }
   }
 
+  // Transcribe audio buffer
+  // ...existing code...
   // Transcribe audio buffer
   async transcribeBuffer(audioBuffer, options = {}) {
     try {
@@ -59,36 +69,68 @@ class DeepgramService {
         model = 'nova-2',
         punctuate = true,
         diarize = false,
+        paragraphs = true,
       } = options;
 
       const { result, error } = await this.client.listen.prerecorded.transcribeFile(
         audioBuffer,
-        {
-          model,
-          language,
-          punctuate,
-          diarize,
-        }
+        { model, language, punctuate, diarize, paragraphs }
       );
 
       if (error) {
         throw new Error(error.message);
       }
 
-      if (result?.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
-        return {
-          transcript: result.results.channels[0].alternatives[0].transcript,
-          confidence: result.results.channels[0].alternatives[0].confidence,
-          language: result.results.language || language,
-        };
+      let fullTranscript = '';
+      if (result?.results?.channels?.[0]?.alternatives?.[0]) {
+        const alternative = result.results.channels[0].alternatives[0];
+        if (result.results.channels[0].paragraphs?.transcript) {
+          fullTranscript = result.results.channels[0].paragraphs.transcript;
+        } else if (alternative.transcript) {
+          fullTranscript = alternative.transcript;
+        }
       }
 
-      return { transcript: '', confidence: 0, language };
+      return {
+        transcript: fullTranscript,
+        confidence: result?.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0,
+        language: result?.results?.language || language,
+        metadata: result?.metadata || {},
+      };
     } catch (error) {
       console.error('Deepgram transcription error:', error);
       throw new Error(`Transcription failed: ${error.message}`);
     }
   }
+
+  //     const { result, error } = await this.client.listen.prerecorded.transcribeFile(
+  //       audioBuffer,
+  //       {
+  //         model,
+  //         language,
+  //         punctuate,
+  //         diarize,
+  //       }
+  //     );
+
+  //     if (error) {
+  //       throw new Error(error.message);
+  //     }
+
+  //     if (result?.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
+  //       return {
+  //         transcript: result.results.channels[0].alternatives[0].transcript,
+  //         confidence: result.results.channels[0].alternatives[0].confidence,
+  //         language: result.results.language || language,
+  //       };
+  //     }
+
+  //     return { transcript: '', confidence: 0, language };
+  //   } catch (error) {
+  //     console.error('Deepgram transcription error:', error);
+  //     throw new Error(`Transcription failed: ${error.message}`);
+  //   }
+  // }
 
   // Create live transcription connection
   createLiveConnection(options = {}) {

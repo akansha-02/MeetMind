@@ -1,7 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatDate } from '../../utils/formatDate';
+import toast from 'react-hot-toast';
+import { meetingsAPI } from '../../services/api';
+// import { MermaidDiagram } from '../summarize/MermaidDiagram';
 
-export const MeetingSummary = ({ meeting }) => {
+export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerateSummary = async () => {
+    if (!meeting?.transcript) {
+      toast.error('No transcript available');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const { data } = await meetingsAPI.generateSummary(meeting._id, {
+        transcript: meeting.transcript,
+        language: meeting.language || 'en'
+      });
+      
+      toast.success(`Summary generated${data?.provider ? ` using ${data.provider}` : ''}`);
+      
+      if (onSummaryUpdate) {
+        onSummaryUpdate(data.summary);
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to generate summary');
+      console.error('Summary generation error:', error);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (!meeting) return null;
 
   return (
@@ -44,8 +75,32 @@ export const MeetingSummary = ({ meeting }) => {
       {/* Summary */}
       {meeting.summary && (
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-4">Summary</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Summary</h3>
+            <button
+              onClick={handleGenerateSummary}
+              disabled={generating}
+              className="text-sm px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {generating ? 'Regenerating...' : 'Regenerate'}
+            </button>
+          </div>
           <p className="text-gray-700 whitespace-pre-wrap">{meeting.summary}</p>
+        </div>
+      )}
+
+      {/* Generate Summary if missing */}
+      {!meeting.summary && meeting.transcript && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">No Summary Yet</h3>
+          <p className="text-blue-800 mb-4">Generate an AI summary of this meeting transcript.</p>
+          <button
+            onClick={handleGenerateSummary}
+            disabled={generating}
+            className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {generating ? 'Generating Summary...' : 'Generate Summary'}
+          </button>
         </div>
       )}
 
@@ -69,3 +124,4 @@ export const MeetingSummary = ({ meeting }) => {
     </div>
   );
 };
+

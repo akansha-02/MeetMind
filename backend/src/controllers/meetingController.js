@@ -2,6 +2,8 @@ import Meeting from '../models/Meeting.js';
 import ActionItem from '../models/ActionItem.js';
 import openaiService from '../services/openaiService.js';
 import vectorService from '../services/vectorService.js';
+import { generateMeetingSummary } from '../services/summaryService.js';
+
 
 // @desc    Get all meetings for user
 // @route   GET /api/meetings
@@ -58,7 +60,18 @@ export const getMeeting = async (req, res, next) => {
 // @access  Private
 export const createMeeting = async (req, res, next) => {
   try {
-    const { title, language = 'en' } = req.body;
+    const { title, language = 'en', participants = [] } = req.body;
+
+    // Normalize participants to { email, name?, status }
+    const participantDocs = Array.isArray(participants)
+      ? participants
+          .filter((p) => p && p.email)
+          .map((p) => ({
+            email: p.email.trim(),
+            name: p.name?.trim(),
+            status: p.status || 'invited',
+          }))
+      : [];
 
     const meeting = await Meeting.create({
       userId: req.user._id,
@@ -66,6 +79,7 @@ export const createMeeting = async (req, res, next) => {
       language,
       status: 'active',
       startTime: new Date(),
+      participants: participantDocs,
     });
 
     res.status(201).json(meeting);
@@ -102,6 +116,37 @@ export const updateMeeting = async (req, res, next) => {
     await meeting.save();
 
     res.json(meeting);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Generate / regenerate summary only
+// @route   POST /api/meetings/:id/summary
+// @access  Private
+export const generateMeetingSummaryOnly = async (req, res, next) => {
+  try {
+    const meeting = await Meeting.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!meeting) {
+      return res.status(404).json({ message: 'Meeting not found' });
+    }
+
+    if (!meeting.transcript) {
+      return res.status(400).json({ message: 'No transcript available' });
+    }
+    const { summary, provider } = await generateMeetingSummary(
+      meeting.transcript,
+      meeting.language
+    );
+
+    meeting.summary = summary;
+    await meeting.save();
+
+    res.json({ summary, provider });
   } catch (error) {
     next(error);
   }
@@ -148,12 +193,17 @@ export const completeMeeting = async (req, res, next) => {
       return res.status(400).json({ message: 'No transcript available' });
     }
 
-    // Generate summary, minutes, and extract action items
-    const [summary, actionItemsData, minutes] = await Promise.all([
-      openaiService.generateSummary(meeting.transcript, meeting.language),
-      openaiService.extractActionItems(meeting.transcript, meeting.language),
-      Promise.resolve(null), // Will generate after summary
-    ]);
+ // 🔹 Use OpenAI primary, Gemini fallback for SUMMARY
+ const { summary, provider } = await generateMeetingSummary(
+  meeting.transcript,
+  meeting.language
+);
+
+// 🔹 Keep existing OpenAI calls for action items & minutes
+const [actionItemsData] = await Promise.all([
+  openaiService.extractActionItems(meeting.transcript, meeting.language),
+  // minutes are generated after summary
+]);
 
     // Generate minutes after summary is ready
     const generatedMinutes = await openaiService.generateMinutes(
@@ -202,8 +252,46 @@ export const completeMeeting = async (req, res, next) => {
     res.json({
       meeting,
       actionItems,
+      provider,
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Regenerate summary for a meeting
+// @route   POST /api/meetings/:id/summary
+// @access  Private
+export const regenerateSummary = async (req, res, next) => {
+  try {
+    const meeting = await Meeting.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!meeting) {
+      return res.status(404).json({ message: 'Meeting not found' });
+    }
+
+    if (!meeting.transcript) {
+      return res.status(400).json({ message: 'No transcript available for summary generation' });
+    }
+
+    const { summary, provider } = await generateMeetingSummary(
+      meeting.transcript,
+      meeting.language
+    );
+
+    meeting.summary = summary;
+    await meeting.save();
+
+    res.json({
+      summary,
+      provider,
+      message: 'Summary regenerated successfully',
+    });
+  } catch (error) {
+    console.error('Summary regeneration error:', error);
     next(error);
   }
 };

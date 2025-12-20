@@ -10,7 +10,7 @@ export const MeetingDetail = () => {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       <MeetingDashboard meetingId={id} />
-      <ActionItemsList meetingId={id} />
+      {/* <ActionItemsList meetingId={id} /> */}
     </div>
   );
 };

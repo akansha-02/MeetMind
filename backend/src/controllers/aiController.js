@@ -2,6 +2,7 @@ import Meeting from '../models/Meeting.js';
 import ActionItem from '../models/ActionItem.js';
 import openaiService from '../services/openaiService.js';
 import vectorService from '../services/vectorService.js';
+import { generateMeetingSummary } from '../services/summaryService.js'; // ⬅️ NEW IMPORT
 
 // @desc    Generate AI content for meeting
 // @route   POST /api/ai/process/:meetingId
@@ -21,11 +22,16 @@ export const processMeeting = async (req, res, next) => {
       return res.status(400).json({ message: 'No transcript available' });
     }
 
-    // Generate summary, action items, and minutes
-    const [summary, actionItemsData, minutes] = await Promise.all([
-      openaiService.generateSummary(meeting.transcript, meeting.language),
+    // 🔹 Use OpenAI primary, Gemini fallback for SUMMARY only
+    const { summary, provider } = await generateMeetingSummary(
+      meeting.transcript,
+      meeting.language
+    );
+
+    // 🔹 Keep OpenAI for action items & minutes (or later add fallback too)
+    const [actionItemsData] = await Promise.all([
       openaiService.extractActionItems(meeting.transcript, meeting.language),
-      Promise.resolve(null),
+      // minutes moved below, to keep using summary
     ]);
 
     const generatedMinutes = await openaiService.generateMinutes(
@@ -54,7 +60,7 @@ export const processMeeting = async (req, res, next) => {
       actionItems.push(actionItem);
     }
 
-    // Store in vector database
+    // Store in vector database (non‑critical)
     try {
       await vectorService.storeMeetingContent(
         meeting._id,
@@ -73,6 +79,7 @@ export const processMeeting = async (req, res, next) => {
       actionItems,
       summary,
       minutes: generatedMinutes,
+      provider, // 'openai' or 'gemini' (optional to send)
     });
   } catch (error) {
     next(error);

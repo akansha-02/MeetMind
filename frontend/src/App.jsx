@@ -13,6 +13,7 @@ import { Register } from './components/auth/Register';
 import { Dashboard } from './pages/Dashboard';
 import { MeetingDetail } from './pages/MeetingDetail';
 import { KnowledgeBase } from './pages/KnowledgeBase';
+import { Summarize } from './pages/Summarize';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -82,6 +83,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <KnowledgeBase />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/summarize"
+            element={
+              <ProtectedRoute>
+                <Summarize />
               </ProtectedRoute>
             }
           />

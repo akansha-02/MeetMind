@@ -36,11 +36,19 @@ const upload = multer({
       'audio/ogg',
       'audio/m4a',
       'audio/aac',
+      'video/mp4',
+      'video/webm',
+      'video/quicktime', // MOV files
+      'video/x-msvideo', // AVI files
+      'video/x-matroska', // MKV files
+      'video/ogg',
+      'video/3gpp',
+      'video/mpeg',
     ];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only audio files are allowed.'));
+      cb(new Error('Invalid file type. Only audio/video files are allowed.'));
     }
   },
 });

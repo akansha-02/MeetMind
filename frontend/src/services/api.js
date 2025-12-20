@@ -52,6 +52,7 @@ export const meetingsAPI = {
   delete: (id) => api.delete(`/meetings/${id}`),
   complete: (id) => api.post(`/meetings/${id}/complete`),
   process: (id) => api.post(`/meetings/${id}/process`),
+  generateSummary: (id, data) => api.post(`/meetings/${id}/summary`, data),
 };
 
 // Transcripts API
@@ -75,6 +76,16 @@ export const actionItemsAPI = {
 export const knowledgeBaseAPI = {
   search: (query, limit = 10, filters = {}) =>
     api.post('/knowledge-base/search', { query, limit, filters }),
+};
+
+// Summarize API (standalone file summarization)
+export const summarizeAPI = {
+  upload: (formData) => api.post('/summarize/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getAll: () => api.get('/summarize'),
+  getById: (id) => api.get(`/summarize/${id}`),
+  delete: (id) => api.delete(`/summarize/${id}`),
 };
 
 export default api;

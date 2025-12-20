@@ -40,6 +40,7 @@ const knowledgeBaseSchema = new mongoose.Schema(
 knowledgeBaseSchema.index({ userId: 1, createdAt: -1 });
 knowledgeBaseSchema.index({ meetingId: 1 });
 knowledgeBaseSchema.index({ contentType: 1 });
+knowledgeBaseSchema.index({ 'metadata.title': 1 });
 
 const KnowledgeBase = mongoose.model('KnowledgeBase', knowledgeBaseSchema);
 
