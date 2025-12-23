@@ -11,6 +11,7 @@ export const Dashboard = () => {
   const [newMeetingTitle, setNewMeetingTitle] = useState('');
   const [invitees, setInvitees] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,7 +37,13 @@ export const Dashboard = () => {
       return;
     }
 
+    // Prevent duplicate submissions
+    if (creating) {
+      return;
+    }
+
     try {
+      setCreating(true);
       const participants = invitees
         .split(',')
         .map((e) => e.trim())
@@ -53,6 +60,8 @@ export const Dashboard = () => {
       navigate(`/meetings/${response.data._id}`);
     } catch (error) {
       toast.error('Failed to create meeting');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -103,9 +112,14 @@ export const Dashboard = () => {
             </div>
             <button
               type="submit"
-              className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700"
+              disabled={creating}
+              className={`px-6 py-2 rounded-md text-white font-medium ${
+                creating
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
             >
-              Create Meeting
+              {creating ? 'Creating...' : 'Create Meeting'}
             </button>
           </form>
         </div>

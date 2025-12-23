@@ -20,10 +20,7 @@ import { summarizeWithGemini } from "./geminiService.js";
 
 function isOpenAIQuotaError(error) {
   const status = error?.response?.status;
-  const msg =
-    error?.response?.data?.error?.message ||
-    error?.message ||
-    "";
+  const msg = error?.response?.data?.error?.message || error?.message || "";
 
   const lower = msg.toLowerCase();
   return (
@@ -45,34 +42,51 @@ export async function generateMeetingSummary(transcript, language = "en") {
     throw new Error("Transcript is empty");
   }
 
+  console.log(
+    `🔄 Attempting summary generation (length: ${text.length} chars, language: ${language})`
+  );
+
   // 1) Try OpenAI first
   try {
+    console.log("🔵 Trying OpenAI...");
     const summary = await OpenAIService.generateSummary(text, language);
+    console.log("✅ Summary generation successful (provider: OpenAI)");
     return { summary, provider: "openai" };
   } catch (error) {
-    console.error("OpenAI summary failed:", error?.response?.data || error);
+    console.error(
+      "❌ OpenAI summary failed:",
+      error?.response?.data?.error?.message || error.message
+    );
 
     if (!isOpenAIQuotaError(error)) {
       // Not a quota/rate limit issue – rethrow so you see real bugs
+      console.error("⚠️  Not a quota error - rethrowing");
       throw error;
     }
   }
 
   // 2) Fallback to Gemini
   try {
-    console.warn("Falling back to Gemini due to OpenAI quota issue.");
+    console.warn("⚠️  Falling back to Gemini due to OpenAI quota/auth issue");
+    console.log("🟢 Trying Gemini...");
     const summary = await summarizeWithGemini(text, language);
-    console.log('✅ Summary generation successful (provider: gemini)');
+    console.log("✅ Summary generation successful (provider: Gemini)");
     return { summary, provider: "gemini" };
   } catch (error) {
-    console.error("Gemini summary failed:", error?.response?.data || error);
+    console.error("❌ Gemini summary failed:", error?.message || error);
     // Final fallback: Hugging Face (text summarization)
     try {
+      console.warn("⚠️  Falling back to Hugging Face");
+      console.log("🟡 Trying Hugging Face...");
       const summary = await summarizeWithHuggingFace(text);
-      console.log('✅ Summary generation successful (provider: huggingface)');
+      console.log("✅ Summary generation successful (provider: HuggingFace)");
       return { summary, provider: "huggingface" };
     } catch (hfError) {
-      console.error("Hugging Face summary failed:", hfError?.response?.data || hfError);
+      console.error(
+        "❌ Hugging Face summary failed:",
+        hfError?.message || hfError
+      );
+      console.error("💥 All AI providers failed - no summary generated");
       throw hfError;
     }
   }

@@ -59,26 +59,43 @@ export const SearchContext = ({ onSelectMeeting }) => {
               <div
                 key={index}
                 className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => onSelectMeeting && onSelectMeeting(result.meetingId)}
+                onClick={() => {
+                  const meetingId = result.meeting?._id || result.meetingId;
+                  if (meetingId) {
+                    onSelectMeeting && onSelectMeeting(meetingId);
+                  }
+                }}
               >
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-semibold text-gray-900">
-                    {result.metadata?.title || 'Meeting'}
+                    {result.meeting?.title || result.metadata?.title || 'Meeting'}
                   </h4>
-                  {result.metadata?.date && (
-                    <span className="text-sm text-gray-500">
-                      {formatDate(result.metadata.date)}
+                  <div className="text-right">
+                    {result.meeting?.startTime && (
+                      <span className="text-sm text-gray-500 block">
+                        {formatDate(result.meeting.startTime)}
+                      </span>
+                    )}
+                    {result.score && (
+                      <span className="text-xs text-gray-400">
+                        Match: {(result.score * 100).toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm line-clamp-3">
+                  {result.content}
+                </p>
+                <div className="mt-2 text-xs text-gray-500">
+                  <span className="inline-block bg-gray-100 px-2 py-1 rounded mr-2">
+                    {result.contentType || 'content'}
+                  </span>
+                  {result.meeting?.participants?.length > 0 && (
+                    <span className="inline-block">
+                      {result.meeting.participants.length} participants
                     </span>
                   )}
                 </div>
-                <p className="text-gray-600 text-sm line-clamp-2">
-                  {result.content}
-                </p>
-                {result.metadata?.similarity && (
-                  <div className="mt-2 text-xs text-gray-400">
-                    Similarity: {(result.metadata.similarity * 100).toFixed(1)}%
-                  </div>
-                )}
               </div>
             ))}
           </div>

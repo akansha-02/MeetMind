@@ -9,6 +9,9 @@ class DeepgramService {
   // Transcribe audio file
   async transcribeFile(audioFilePath, options = {}) {
     try {
+      if (!this.client) {
+        throw new Error('Deepgram is not configured (missing DEEPGRAM_API_KEY)');
+      }
       const {
         language = 'en',
         model = 'nova-2',
@@ -64,6 +67,9 @@ class DeepgramService {
   // Transcribe audio buffer
   async transcribeBuffer(audioBuffer, options = {}) {
     try {
+      if (!this.client) {
+        throw new Error('Deepgram is not configured (missing DEEPGRAM_API_KEY)');
+      }
       const {
         language = 'en',
         model = 'nova-2',
@@ -134,6 +140,9 @@ class DeepgramService {
 
   // Create live transcription connection
   createLiveConnection(options = {}) {
+    if (!this.client) {
+      throw new Error('Deepgram is not configured (missing DEEPGRAM_API_KEY)');
+    }
     const {
       language = 'en',
       model = 'nova-2',
@@ -156,6 +165,9 @@ class DeepgramService {
   // Detect language from audio
   async detectLanguage(audioFilePath) {
     try {
+      if (!this.client) {
+        throw new Error('Deepgram is not configured (missing DEEPGRAM_API_KEY)');
+      }
       const audioBuffer = await fs.readFile(audioFilePath);
       const { result, error } = await this.client.listen.prerecorded.transcribeFile(
         audioBuffer,

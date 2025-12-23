@@ -53,7 +53,7 @@ npm install
 
 3. Create a `.env` file in the `backend` directory:
 ```env
-PORT=5000
+PORT=5001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 
@@ -87,8 +87,8 @@ npm install
 
 3. Create a `.env` file in the `frontend` directory:
 ```env
-VITE_API_URL=http://localhost:5000/api
-VITE_SOCKET_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5001/api
+VITE_SOCKET_URL=http://localhost:5001
 ```
 
 4. Start the frontend development server:
@@ -209,8 +209,23 @@ MeetMind/
 
 ## Development
 
-- Backend runs on `http://localhost:5000`
+- Backend runs on `http://localhost:5001`
 - Frontend runs on `http://localhost:5173`
+
+## Troubleshooting
+
+- Backend not starting or login/register failing:
+  - Ensure `MONGODB_URI` and `JWT_SECRET` are set in `backend/.env`.
+  - AI keys (`OPENAI_API_KEY`, `DEEPGRAM_API_KEY`, etc.) are optional; without them, AI features are disabled but auth works.
+  - Check the backend health: `GET http://localhost:5001/api/health`.
+  - If port 5001 is in use, free it on Windows:
+    ```powershell
+    Get-NetTCPConnection -LocalPort 5001 | Select-Object OwningProcess
+    Stop-Process -Id <PID> -Force
+    ```
+- Frontend cannot reach backend:
+  - Set `VITE_API_URL` in `frontend/.env` to `http://localhost:5001/api`.
+  - Verify CORS origin matches `FRONTEND_URL` in backend `.env`.
 
 ## License
 

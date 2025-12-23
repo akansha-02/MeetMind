@@ -7,8 +7,16 @@ class VectorService {
   // Store content with embedding
   async storeContent(meetingId, userId, content, contentType = 'transcript', metadata = {}) {
     try {
+      console.log(`💾 Generating embedding for ${contentType}...`);
       // Generate embedding
       const embedding = await openaiService.generateEmbedding(content);
+
+      if (!embedding || embedding.length === 0) {
+        console.warn(`⚠️  No embedding generated for ${contentType}`);
+        return null;
+      }
+
+      console.log(`✅ Embedding generated (${embedding.length} dimensions)`);
 
       // Store in MongoDB with embedding
       const knowledgeEntry = await KnowledgeBase.create({
@@ -20,9 +28,10 @@ class VectorService {
         embedding,
       });
 
+      console.log(`📍 Stored knowledge base entry:`, { _id: knowledgeEntry._id, contentType });
       return knowledgeEntry;
     } catch (error) {
-      console.error('Vector storage error:', error);
+      console.error('❌ Vector storage error:', error.message);
       throw new Error(`Failed to store content: ${error.message}`);
     }
   }
@@ -30,6 +39,8 @@ class VectorService {
   // Semantic + structured search
   async searchSimilar(userId, query, limit = 10, filters = {}) {
     try {
+      console.log(`🔎 Knowledge Base search initiated:`, { userId, query, limit, filters });
+
       // 1) Structured search shortcuts
       const titleMatch = query.match(/^title:\s*(.+)$/i);
       if (titleMatch) {
@@ -104,10 +115,10 @@ class VectorService {
       const pipeline = [
         {
           $vectorSearch: {
-            index: 'vector_index',
+            index: 'vector_search',
             path: 'embedding',
             queryVector: queryEmbedding,
-            numCandidates: limit * 10,
+            numCandidates: Math.min(limit * 10, 100),
             limit: limit,
           },
         },
@@ -126,7 +137,9 @@ class VectorService {
         { $unwind: { path: '$meeting', preserveNullAndEmptyArrays: true } },
       ];
 
+      console.log('🔍 Vector search query:', { index: 'vector_search', queryLength: query.length, limit });
       const results = await KnowledgeBase.aggregate(pipeline);
+      console.log(`✅ Vector search returned ${results.length} results`);
 
       return results.map((result) => ({
         _id: result._id,
@@ -138,7 +151,8 @@ class VectorService {
         createdAt: result.createdAt,
       }));
     } catch (error) {
-      console.error('Vector search error:', error);
+      console.warn('Vector search error (using fallback):', error.message);
+      console.log('Falling back to text-based search...');
       return this.fallbackTextSearch(userId, query, limit, filters);
     }
   }
@@ -192,7 +206,12 @@ class VectorService {
   async storeMeetingContent(meetingId, userId, transcript, summary, minutes, actionItems = []) {
     try {
       const meeting = await Meeting.findById(meetingId).lean();
+      if (!meeting) {
+        console.warn(`Meeting not found for ID: ${meetingId}`);
+        return false;
+      }
       const title = meeting?.title || 'Meeting';
+      console.log(`📚 Storing knowledge base content for meeting: ${title}`);
       const operations = [];
 
       if (transcript) {
@@ -236,9 +255,10 @@ class VectorService {
       }
 
       await Promise.all(operations);
+      console.log(`✅ Stored ${operations.length} knowledge base entries for meeting: ${title}`);
       return true;
     } catch (error) {
-      console.error('Store meeting content error:', error);
+      console.error('❌ Store meeting content error:', error.message);
       throw new Error(`Failed to store meeting content: ${error.message}`);
     }
   }
