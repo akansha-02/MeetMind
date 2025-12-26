@@ -2,7 +2,9 @@ import Meeting from '../models/Meeting.js';
 import ActionItem from '../models/ActionItem.js';
 import openaiService from '../services/openaiService.js';
 import vectorService from '../services/vectorService.js';
+import knowledgeBaseService from '../services/knowledgeBaseService.js';
 import { generateMeetingSummary } from '../services/summaryService.js';
+import emailService from '../services/emailService.js';
 
 
 // @desc    Get all meetings for user
@@ -82,7 +84,47 @@ export const createMeeting = async (req, res, next) => {
       participants: participantDocs,
     });
 
+    // 🔹 Send email invites
+    const meetingLink = `${process.env.FRONTEND_URL}/meetings/${meeting._id}`;
+    for (const participant of participantDocs) {
+      emailService.sendMeetingInvite(
+        participant.email,
+        meeting.title,
+        meetingLink,
+        req.user.name
+      );
+    }
+
     res.status(201).json(meeting);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update meeting transcript
+// @route   PUT /api/meetings/:id/transcript
+// @access  Private
+export const updateMeetingTranscript = async (req, res, next) => {
+  try {
+    const { transcript } = req.body;
+
+    if (!transcript) {
+      return res.status(400).json({ message: 'Transcript is required' });
+    }
+
+    const meeting = await Meeting.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!meeting) {
+      return res.status(404).json({ message: 'Meeting not found' });
+    }
+
+    meeting.transcript = transcript;
+    await meeting.save();
+
+    res.json({ message: 'Transcript updated successfully', meeting });
   } catch (error) {
     next(error);
   }
@@ -199,11 +241,10 @@ export const completeMeeting = async (req, res, next) => {
   meeting.language
 );
 
-// 🔹 Keep existing OpenAI calls for action items & minutes
-const [actionItemsData] = await Promise.all([
-  openaiService.extractActionItems(meeting.transcript, meeting.language),
-  // minutes are generated after summary
-]);
+// 🔹 Action items feature commented out
+// const [actionItemsData] = await Promise.all([
+//   openaiService.extractActionItems(meeting.transcript, meeting.language),
+// ]);
 
     // Generate minutes after summary is ready
     const generatedMinutes = await openaiService.generateMinutes(
@@ -219,20 +260,32 @@ const [actionItemsData] = await Promise.all([
     meeting.endTime = new Date();
     await meeting.save();
 
-    // Create action items
-    const actionItems = [];
-    for (const itemData of actionItemsData) {
-      const actionItem = await ActionItem.create({
-        meetingId: meeting._id,
-        userId: req.user._id,
-        title: itemData.title || 'Untitled Task',
-        description: itemData.description || '',
-        assignee: itemData.assignee || null,
-        dueDate: itemData.dueDate ? new Date(itemData.dueDate) : null,
-        priority: itemData.priority || 'medium',
-      });
-      actionItems.push(actionItem);
+    // ✅ Store meeting with embeddings
+    try {
+      await knowledgeBaseService.storeMeetingSummary(
+        meeting._id,
+        summary,
+        meeting.transcript
+      );
+    } catch (embeddingError) {
+      console.error('Embedding storage error (non-critical):', embeddingError);
+      // Don't fail the request if embedding storage fails
     }
+
+    // Create action items - COMMENTED OUT
+    // const actionItems = [];
+    // for (const itemData of actionItemsData) {
+    //   const actionItem = await ActionItem.create({
+    //     meetingId: meeting._id,
+    //     userId: req.user._id,
+    //     title: itemData.title || 'Untitled Task',
+    //     description: itemData.description || '',
+    //     assignee: itemData.assignee || null,
+    //     dueDate: itemData.dueDate ? new Date(itemData.dueDate) : null,
+    //     priority: itemData.priority || 'medium',
+    //   });
+    //   actionItems.push(actionItem);
+    // }
 
     // Store content in vector database
     try {
@@ -242,7 +295,7 @@ const [actionItemsData] = await Promise.all([
         meeting.transcript,
         summary,
         generatedMinutes,
-        actionItems
+        [] // empty action items array
       );
     } catch (vectorError) {
       console.error('Vector storage error (non-critical):', vectorError);
@@ -251,7 +304,7 @@ const [actionItemsData] = await Promise.all([
 
     res.json({
       meeting,
-      actionItems,
+      // actionItems: [], // commented out
       provider,
     });
   } catch (error) {

@@ -56,6 +56,10 @@ const meetingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    embedding: {
+      type: [Number],
+      default: null,
+    },
   },
   {
     timestamps: true,

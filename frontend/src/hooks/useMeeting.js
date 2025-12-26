@@ -74,6 +74,41 @@ export const useMeeting = (meetingId) => {
     }
   }, [socket, emit]);
 
+  const saveTranscript = async (transcript) => {
+    if (!meetingId) {
+      console.error('No meeting ID available');
+      return {
+        success: false,
+        message: 'Cannot save transcript: No active meeting',
+      };
+    }
+
+    if (!transcript || transcript.trim().length === 0) {
+      console.warn('Empty transcript, skipping save');
+      return {
+        success: false,
+        message: 'Empty transcript',
+      };
+    }
+
+    try {
+      console.log(`Saving transcript for meeting ${meetingId}, length: ${transcript.length}`);
+      
+      await meetingsAPI.updateTranscript(meetingId, transcript);
+      
+      console.log('✅ Transcript saved successfully');
+      
+      setMeeting((prev) => ({ ...prev, transcript }));
+      return { success: true };
+    } catch (err) {
+      console.error('Failed to save transcript:', err.response?.data || err.message);
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Failed to save transcript',
+      };
+    }
+  };
+
   const completeMeeting = async () => {
     try {
       const response = await meetingsAPI.complete(meetingId);
@@ -93,6 +128,7 @@ export const useMeeting = (meetingId) => {
     error,
     startTranscription,
     stopTranscription,
+    saveTranscript,
     completeMeeting,
     refreshMeeting: loadMeeting,
   };

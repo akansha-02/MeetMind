@@ -4,6 +4,7 @@ import {
   getMeeting,
   createMeeting,
   updateMeeting,
+  updateMeetingTranscript,
   deleteMeeting,
   completeMeeting,
   regenerateSummary,
@@ -29,5 +30,6 @@ router.route('/:id')
 router.post('/:id/complete', completeMeeting);
 router.post('/:id/process', processMeeting);
 router.post('/:id/summary', regenerateSummary);
+router.put('/:id/transcript', updateMeetingTranscript);
 
 export default router;

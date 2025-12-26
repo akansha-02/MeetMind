@@ -53,6 +53,7 @@ export const meetingsAPI = {
   complete: (id) => api.post(`/meetings/${id}/complete`),
   process: (id) => api.post(`/meetings/${id}/process`),
   generateSummary: (id, data) => api.post(`/meetings/${id}/summary`, data),
+  updateTranscript: (id, transcript) => api.put(`/meetings/${id}/transcript`, { transcript }),
 };
 
 // Transcripts API
