@@ -1,11 +1,11 @@
-import Meeting from '../models/Meeting.js';
-import ActionItem from '../models/ActionItem.js';
-import openaiService from '../services/openaiService.js';
-import vectorService from '../services/vectorService.js';
-import knowledgeBaseService from '../services/knowledgeBaseService.js';
-import { generateMeetingSummary } from '../services/summaryService.js';
-import emailService from '../services/emailService.js';
-
+import Meeting from "../models/Meeting.js";
+import ActionItem from "../models/ActionItem.js";
+import openaiService from "../services/openaiService.js";
+import vectorService from "../services/vectorService.js";
+import knowledgeBaseService from "../services/knowledgeBaseService.js";
+import { generateMeetingSummary } from "../services/summaryService.js";
+import { generateMinutesWithGemini } from "../services/geminiService.js";
+import emailService from "../services/emailService.js";
 
 // @desc    Get all meetings for user
 // @route   GET /api/meetings
@@ -42,13 +42,20 @@ export const getMeetings = async (req, res, next) => {
 // @access  Private
 export const getMeeting = async (req, res, next) => {
   try {
-    const meeting = await Meeting.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
+    const meeting = await Meeting.findById(req.params.id);
 
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      return res.status(404).json({ message: "Meeting not found" });
+    }
+
+    // Check if user is owner or invited participant
+    const isOwner = meeting.userId.toString() === req.user._id.toString();
+    const isInvited = meeting.participants?.some(
+      (p) => p.email.toLowerCase() === req.user.email.toLowerCase()
+    );
+
+    if (!isOwner && !isInvited) {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     res.json(meeting);
@@ -62,7 +69,7 @@ export const getMeeting = async (req, res, next) => {
 // @access  Private
 export const createMeeting = async (req, res, next) => {
   try {
-    const { title, language = 'en', participants = [] } = req.body;
+    const { title, language = "en", participants = [] } = req.body;
 
     // Normalize participants to { email, name?, status }
     const participantDocs = Array.isArray(participants)
@@ -71,7 +78,7 @@ export const createMeeting = async (req, res, next) => {
           .map((p) => ({
             email: p.email.trim(),
             name: p.name?.trim(),
-            status: p.status || 'invited',
+            status: p.status || "invited",
           }))
       : [];
 
@@ -79,7 +86,7 @@ export const createMeeting = async (req, res, next) => {
       userId: req.user._id,
       title: title || `Meeting ${new Date().toLocaleString()}`,
       language,
-      status: 'active',
+      status: "active",
       startTime: new Date(),
       participants: participantDocs,
     });
@@ -109,7 +116,7 @@ export const updateMeetingTranscript = async (req, res, next) => {
     const { transcript } = req.body;
 
     if (!transcript) {
-      return res.status(400).json({ message: 'Transcript is required' });
+      return res.status(400).json({ message: "Transcript is required" });
     }
 
     const meeting = await Meeting.findOne({
@@ -118,13 +125,13 @@ export const updateMeetingTranscript = async (req, res, next) => {
     });
 
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      return res.status(404).json({ message: "Meeting not found" });
     }
 
     meeting.transcript = transcript;
     await meeting.save();
 
-    res.json({ message: 'Transcript updated successfully', meeting });
+    res.json({ message: "Transcript updated successfully", meeting });
   } catch (error) {
     next(error);
   }
@@ -143,17 +150,19 @@ export const updateMeeting = async (req, res, next) => {
     });
 
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      return res.status(404).json({ message: "Meeting not found" });
     }
 
     if (title) meeting.title = title;
     if (transcript !== undefined) meeting.transcript = transcript;
-    if (status) meeting.status = status;
-    if (language) meeting.language = language;
-
-    if (status === 'completed' && !meeting.endTime) {
-      meeting.endTime = new Date();
+    if (status) {
+      meeting.status = status;
+      // Auto-set endTime when marking as completed
+      if (status === "completed" && !meeting.endTime) {
+        meeting.endTime = new Date();
+      }
     }
+    if (language) meeting.language = language;
 
     await meeting.save();
 
@@ -174,11 +183,11 @@ export const generateMeetingSummaryOnly = async (req, res, next) => {
     });
 
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      return res.status(404).json({ message: "Meeting not found" });
     }
 
     if (!meeting.transcript) {
-      return res.status(400).json({ message: 'No transcript available' });
+      return res.status(400).json({ message: "No transcript available" });
     }
     const { summary, provider } = await generateMeetingSummary(
       meeting.transcript,
@@ -205,13 +214,13 @@ export const deleteMeeting = async (req, res, next) => {
     });
 
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      return res.status(404).json({ message: "Meeting not found" });
     }
 
     // Delete associated action items
     await ActionItem.deleteMany({ meetingId: req.params.id });
 
-    res.json({ message: 'Meeting deleted successfully' });
+    res.json({ message: "Meeting deleted successfully" });
   } catch (error) {
     next(error);
   }
@@ -222,43 +231,77 @@ export const deleteMeeting = async (req, res, next) => {
 // @access  Private
 export const completeMeeting = async (req, res, next) => {
   try {
+    console.log(`🏁 Completing meeting: ${req.params.id}`);
+
     const meeting = await Meeting.findOne({
       _id: req.params.id,
       userId: req.user._id,
     });
 
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      return res.status(404).json({ message: "Meeting not found" });
     }
 
     if (!meeting.transcript) {
-      return res.status(400).json({ message: 'No transcript available' });
+      return res.status(400).json({ message: "No transcript available" });
     }
 
- // 🔹 Use OpenAI primary, Gemini fallback for SUMMARY
- const { summary, provider } = await generateMeetingSummary(
-  meeting.transcript,
-  meeting.language
-);
+    console.log(`📝 Generating summary for meeting ${meeting._id}...`);
 
-// 🔹 Action items feature commented out
-// const [actionItemsData] = await Promise.all([
-//   openaiService.extractActionItems(meeting.transcript, meeting.language),
-// ]);
-
-    // Generate minutes after summary is ready
-    const generatedMinutes = await openaiService.generateMinutes(
+    // 🔹 Use OpenAI primary, Gemini fallback for SUMMARY
+    const { summary, provider } = await generateMeetingSummary(
       meeting.transcript,
-      summary,
       meeting.language
     );
+
+    // 🔹 Action items feature commented out
+    // const [actionItemsData] = await Promise.all([
+    //   openaiService.extractActionItems(meeting.transcript, meeting.language),
+    // ]);
+
+    // Generate minutes after summary is ready (non-critical)
+    let generatedMinutes = "";
+    try {
+      generatedMinutes = await openaiService.generateMinutes(
+        meeting.transcript,
+        summary,
+        meeting.language
+      );
+      console.log("✅ Minutes generated successfully with OpenAI");
+    } catch (minutesError) {
+      console.warn(
+        "⚠️ OpenAI minutes generation failed, trying Gemini:",
+        minutesError.message
+      );
+
+      // Try Gemini as fallback
+      try {
+        generatedMinutes = await generateMinutesWithGemini(
+          meeting.transcript,
+          summary,
+          meeting.language
+        );
+        console.log("✅ Minutes generated successfully with Gemini");
+      } catch (geminiError) {
+        console.warn(
+          "⚠️ Gemini minutes generation also failed (non-critical):",
+          geminiError.message
+        );
+        // Continue without minutes - it's not critical for meeting completion
+      }
+    }
 
     // Update meeting
     meeting.summary = summary;
     meeting.minutes = generatedMinutes;
-    meeting.status = 'completed';
+    meeting.status = "completed";
     meeting.endTime = new Date();
     await meeting.save();
+
+    console.log(`✅ Meeting ${meeting._id} completed successfully`);
+    console.log(`   Status: ${meeting.status}`);
+    console.log(`   EndTime: ${meeting.endTime}`);
+    console.log(`   Provider: ${provider}`);
 
     // ✅ Store meeting with embeddings
     try {
@@ -268,7 +311,7 @@ export const completeMeeting = async (req, res, next) => {
         meeting.transcript
       );
     } catch (embeddingError) {
-      console.error('Embedding storage error (non-critical):', embeddingError);
+      console.error("Embedding storage error (non-critical):", embeddingError);
       // Don't fail the request if embedding storage fails
     }
 
@@ -298,7 +341,7 @@ export const completeMeeting = async (req, res, next) => {
         [] // empty action items array
       );
     } catch (vectorError) {
-      console.error('Vector storage error (non-critical):', vectorError);
+      console.error("Vector storage error (non-critical):", vectorError);
       // Don't fail the request if vector storage fails
     }
 
@@ -323,11 +366,13 @@ export const regenerateSummary = async (req, res, next) => {
     });
 
     if (!meeting) {
-      return res.status(404).json({ message: 'Meeting not found' });
+      return res.status(404).json({ message: "Meeting not found" });
     }
 
     if (!meeting.transcript) {
-      return res.status(400).json({ message: 'No transcript available for summary generation' });
+      return res
+        .status(400)
+        .json({ message: "No transcript available for summary generation" });
     }
 
     const { summary, provider } = await generateMeetingSummary(
@@ -341,10 +386,10 @@ export const regenerateSummary = async (req, res, next) => {
     res.json({
       summary,
       provider,
-      message: 'Summary regenerated successfully',
+      message: "Summary regenerated successfully",
     });
   } catch (error) {
-    console.error('Summary regeneration error:', error);
+    console.error("Summary regeneration error:", error);
     next(error);
   }
 };

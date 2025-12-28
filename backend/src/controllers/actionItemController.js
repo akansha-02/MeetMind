@@ -1,5 +1,5 @@
-import ActionItem from '../models/ActionItem.js';
-import Meeting from '../models/Meeting.js';
+import ActionItem from "../models/ActionItem.js";
+import Meeting from "../models/Meeting.js";
 
 // @desc    Get all action items for user
 // @route   GET /api/action-items
@@ -20,7 +20,7 @@ export const getActionItems = async (req, res, next) => {
     }
 
     const actionItems = await ActionItem.find(query)
-      .populate('meetingId', 'title startTime')
+      .populate("meetingId", "title startTime")
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip));
@@ -46,10 +46,10 @@ export const getActionItem = async (req, res, next) => {
     const actionItem = await ActionItem.findOne({
       _id: req.params.id,
       userId: req.user._id,
-    }).populate('meetingId');
+    }).populate("meetingId");
 
     if (!actionItem) {
-      return res.status(404).json({ message: 'Action item not found' });
+      return res.status(404).json({ message: "Action item not found" });
     }
 
     res.json(actionItem);
@@ -63,10 +63,11 @@ export const getActionItem = async (req, res, next) => {
 // @access  Private
 export const createActionItem = async (req, res, next) => {
   try {
-    const { meetingId, title, description, assignee, dueDate, priority } = req.body;
+    const { meetingId, title, description, assignee, dueDate, priority } =
+      req.body;
 
     if (!title) {
-      return res.status(400).json({ message: 'Title is required' });
+      return res.status(400).json({ message: "Title is required" });
     }
 
     // Verify meeting belongs to user if meetingId provided
@@ -77,7 +78,7 @@ export const createActionItem = async (req, res, next) => {
       });
 
       if (!meeting) {
-        return res.status(404).json({ message: 'Meeting not found' });
+        return res.status(404).json({ message: "Meeting not found" });
       }
     }
 
@@ -88,7 +89,7 @@ export const createActionItem = async (req, res, next) => {
       description,
       assignee,
       dueDate: dueDate ? new Date(dueDate) : null,
-      priority: priority || 'medium',
+      priority: priority || "medium",
     });
 
     res.status(201).json(actionItem);
@@ -102,7 +103,8 @@ export const createActionItem = async (req, res, next) => {
 // @access  Private
 export const updateActionItem = async (req, res, next) => {
   try {
-    const { title, description, assignee, dueDate, status, priority } = req.body;
+    const { title, description, assignee, dueDate, status, priority } =
+      req.body;
 
     const actionItem = await ActionItem.findOne({
       _id: req.params.id,
@@ -110,14 +112,20 @@ export const updateActionItem = async (req, res, next) => {
     });
 
     if (!actionItem) {
-      return res.status(404).json({ message: 'Action item not found' });
+      return res.status(404).json({ message: "Action item not found" });
     }
 
     if (title) actionItem.title = title;
     if (description !== undefined) actionItem.description = description;
     if (assignee !== undefined) actionItem.assignee = assignee;
-    if (dueDate !== undefined) actionItem.dueDate = dueDate ? new Date(dueDate) : null;
-    if (status) actionItem.status = status;
+    if (dueDate !== undefined)
+      actionItem.dueDate = dueDate ? new Date(dueDate) : null;
+    if (status) {
+      actionItem.status = status;
+      console.log(
+        `✅ Action item ${actionItem._id} status changed to: ${status}`
+      );
+    }
     if (priority) actionItem.priority = priority;
 
     await actionItem.save();
@@ -139,10 +147,10 @@ export const deleteActionItem = async (req, res, next) => {
     });
 
     if (!actionItem) {
-      return res.status(404).json({ message: 'Action item not found' });
+      return res.status(404).json({ message: "Action item not found" });
     }
 
-    res.json({ message: 'Action item deleted successfully' });
+    res.json({ message: "Action item deleted successfully" });
   } catch (error) {
     next(error);
   }

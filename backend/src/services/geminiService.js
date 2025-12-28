@@ -29,7 +29,7 @@ export async function summarizeWithGemini(transcript, language = "en") {
   const prompt = `
 You are an AI assistant that creates concise meeting summaries.
 Focus on key decisions, topics discussed, and important points.
-Respond in ${language === 'en' ? 'English' : 'the same language as the transcript'}.
+Respond in ${language === "en" ? "English" : "the same language as the transcript"}.
 
 Transcript:
 ${transcript}
@@ -44,5 +44,50 @@ ${transcript}
   }
 
   console.log("✅ Gemini summary generated successfully");
+  return text.trim();
+}
+
+export async function generateMinutesWithGemini(
+  transcript,
+  summary,
+  language = "en"
+) {
+  if (!genAI) {
+    throw new Error("Gemini client not initialized");
+  }
+
+  console.log("▶️ generateMinutesWithGemini called, language:", language);
+
+  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+
+  const prompt = `
+You are an AI assistant that creates formal meeting minutes.
+Create well-structured meeting minutes with sections for:
+- Meeting Overview
+- Attendees (if mentioned)
+- Agenda Items
+- Discussion Points
+- Decisions Made
+- Action Items Summary
+- Next Steps
+
+Format the minutes professionally. Respond in ${language === "en" ? "English" : "the same language as the transcript"}.
+
+Transcript:
+${transcript}
+
+Summary:
+${summary}
+  `.trim();
+
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+  const text = response.text();
+
+  if (!text) {
+    throw new Error("Gemini returned empty completion");
+  }
+
+  console.log("✅ Gemini minutes generated successfully");
   return text.trim();
 }

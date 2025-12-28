@@ -10,7 +10,7 @@ class OpenAIService {
   async generateSummary(transcript, language = "en") {
     try {
       if (!this.client) {
-        throw new Error('OpenAI is not configured (missing OPENAI_API_KEY)');
+        throw new Error("OpenAI is not configured (missing OPENAI_API_KEY)");
       }
       const chunks = chunkText(transcript, 3000);
       const partialSummaries = [];
@@ -62,7 +62,7 @@ class OpenAIService {
   async extractActionItems(transcript, language = "en") {
     try {
       if (!this.client) {
-        throw new Error('OpenAI is not configured (missing OPENAI_API_KEY)');
+        throw new Error("OpenAI is not configured (missing OPENAI_API_KEY)");
       }
       const systemPrompt = `You are an AI assistant that extracts action items from meeting transcripts.
 Extract all actionable tasks mentioned in the meeting.
@@ -119,7 +119,7 @@ Respond in valid JSON format only.`;
   async generateMinutes(transcript, summary, language = "en") {
     try {
       if (!this.client) {
-        throw new Error('OpenAI is not configured (missing OPENAI_API_KEY)');
+        throw new Error("OpenAI is not configured (missing OPENAI_API_KEY)");
       }
       const systemPrompt = `You are an AI assistant that creates formal meeting minutes.
 Create well-structured meeting minutes with sections for:
@@ -136,7 +136,7 @@ Format the minutes professionally. Respond in ${language === "en" ? "English" : 
       const userPrompt = `Create meeting minutes from this transcript and summary:\n\nTranscript:\n${transcript}\n\nSummary:\n${summary}`;
 
       const response = await this.client.chat.completions.create({
-        model: "gpt-4.1",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -232,7 +232,7 @@ Format the minutes professionally. Respond in ${language === "en" ? "English" : 
   async generateEmbedding(text) {
     try {
       if (!this.client) {
-        throw new Error('OpenAI is not configured (missing OPENAI_API_KEY)');
+        throw new Error("OpenAI is not configured (missing OPENAI_API_KEY)");
       }
       const response = await this.client.embeddings.create({
         model: "text-embedding-3-small",
@@ -250,7 +250,7 @@ Format the minutes professionally. Respond in ${language === "en" ? "English" : 
   async generateEmbeddings(texts) {
     try {
       if (!this.client) {
-        throw new Error('OpenAI is not configured (missing OPENAI_API_KEY)');
+        throw new Error("OpenAI is not configured (missing OPENAI_API_KEY)");
       }
       const cleanedTexts = texts.map((text) => text.replace(/\n/g, " "));
       const response = await this.client.embeddings.create({

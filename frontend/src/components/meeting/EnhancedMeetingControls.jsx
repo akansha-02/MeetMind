@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import toast from "react-hot-toast";
 
 export const EnhancedMeetingControls = ({
   isRecording,
-  screenSharing,
   onStartRecording,
   onStopRecording,
-  onToggleScreenShare,
   onCompleteMeeting,
   meetingStatus,
   transcriptionError,
@@ -13,9 +12,33 @@ export const EnhancedMeetingControls = ({
   const [isCompleting, setIsCompleting] = useState(false);
 
   const handleComplete = async () => {
+    if (
+      !window.confirm(
+        "Complete this meeting? This will generate a summary and mark it as complete."
+      )
+    ) {
+      return;
+    }
+
+    console.log("🏁 Completing meeting...");
     setIsCompleting(true);
-    await onCompleteMeeting();
-    setIsCompleting(false);
+
+    try {
+      const result = await onCompleteMeeting();
+      console.log("✅ Meeting completion result:", result);
+
+      if (result?.success) {
+        toast.success("Meeting completed successfully!");
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast.error(result?.message || "Failed to complete meeting");
+      }
+    } catch (error) {
+      console.error("❌ Error:", error);
+      toast.error("Failed to complete meeting");
+    } finally {
+      setIsCompleting(false);
+    }
   };
 
   return (
@@ -37,7 +60,11 @@ export const EnhancedMeetingControls = ({
             onClick={() => onStartRecording(false)}
             className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition"
           >
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path
                 fillRule="evenodd"
                 d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
@@ -51,7 +78,11 @@ export const EnhancedMeetingControls = ({
             onClick={onStopRecording}
             className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition"
           >
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path
                 fillRule="evenodd"
                 d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
@@ -62,36 +93,14 @@ export const EnhancedMeetingControls = ({
           </button>
         )}
 
-        {/* Screen Share Button */}
-        {isRecording && (
-          <button
-            onClick={onToggleScreenShare}
-            className={`flex items-center px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition ${
-              screenSharing
-                ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                : 'bg-blue-100 text-blue-700 hover:bg-blue-200 focus:ring-blue-500'
-            }`}
-          >
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" />
-              <path
-                fillRule="evenodd"
-                d="M6.5 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm6 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {screenSharing ? 'Stop Screen' : 'Share Screen'}
-          </button>
-        )}
-
         {/* Complete Meeting */}
-        {meetingStatus === 'active' && (
+        {meetingStatus === "active" && (
           <button
             onClick={handleComplete}
             disabled={isCompleting || isRecording}
             className="flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isCompleting ? 'Processing...' : 'Complete Meeting'}
+            {isCompleting ? "Processing..." : "Complete Meeting"}
           </button>
         )}
       </div>
@@ -101,18 +110,9 @@ export const EnhancedMeetingControls = ({
         <div className="mt-4 text-center">
           <div className="inline-flex items-center gap-3">
             <span className="w-3 h-3 bg-red-600 rounded-full mr-2 animate-pulse"></span>
-            <span className="text-red-600 font-medium">Recording in progress</span>
-            {screenSharing && (
-              <>
-                <span className="text-gray-400">•</span>
-                <span className="flex items-center text-blue-600 font-medium">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" />
-                  </svg>
-                  Screen sharing
-                </span>
-              </>
-            )}
+            <span className="text-red-600 font-medium">
+              Recording in progress
+            </span>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { meetingsAPI } from '../services/api';
-import { useSocket } from './useSocket';
+import { useState, useEffect, useCallback } from "react";
+import { meetingsAPI } from "../services/api";
+import { useSocket } from "./useSocket";
 
 export const useMeeting = (meetingId) => {
   const [meeting, setMeeting] = useState(null);
@@ -23,7 +23,7 @@ export const useMeeting = (meetingId) => {
       setMeeting(response.data);
       setError(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load meeting');
+      setError(err.response?.data?.message || "Failed to load meeting");
     } finally {
       setLoading(false);
     }
@@ -33,9 +33,9 @@ export const useMeeting = (meetingId) => {
   useEffect(() => {
     if (!socket || !meetingId) return;
 
-    emit('join-meeting', { meetingId });
+    emit("join-meeting", { meetingId });
 
-    const unsubscribeTranscript = on('transcript-interim', (data) => {
+    const unsubscribeTranscript = on("transcript-interim", (data) => {
       if (data.meetingId === meetingId) {
         setMeeting((prev) => ({
           ...prev,
@@ -45,7 +45,7 @@ export const useMeeting = (meetingId) => {
       }
     });
 
-    const unsubscribeFinal = on('transcript-final', (data) => {
+    const unsubscribeFinal = on("transcript-final", (data) => {
       if (data.meetingId === meetingId) {
         setMeeting((prev) => ({
           ...prev,
@@ -62,62 +62,79 @@ export const useMeeting = (meetingId) => {
     };
   }, [socket, meetingId, emit, on]);
 
-  const startTranscription = useCallback((language = 'en') => {
-    if (socket && meetingId) {
-      emit('start-transcription', { meetingId, language });
-    }
-  }, [socket, meetingId, emit]);
+  const startTranscription = useCallback(
+    (language = "en") => {
+      if (socket && meetingId) {
+        emit("start-transcription", { meetingId, language });
+      }
+    },
+    [socket, meetingId, emit]
+  );
 
   const stopTranscription = useCallback(() => {
     if (socket) {
-      emit('stop-transcription');
+      emit("stop-transcription");
     }
   }, [socket, emit]);
 
   const saveTranscript = async (transcript) => {
     if (!meetingId) {
-      console.error('No meeting ID available');
+      console.error("No meeting ID available");
       return {
         success: false,
-        message: 'Cannot save transcript: No active meeting',
+        message: "Cannot save transcript: No active meeting",
       };
     }
 
     if (!transcript || transcript.trim().length === 0) {
-      console.warn('Empty transcript, skipping save');
+      console.warn("Empty transcript, skipping save");
       return {
         success: false,
-        message: 'Empty transcript',
+        message: "Empty transcript",
       };
     }
 
     try {
-      console.log(`Saving transcript for meeting ${meetingId}, length: ${transcript.length}`);
-      
+      console.log(
+        `Saving transcript for meeting ${meetingId}, length: ${transcript.length}`
+      );
+
       await meetingsAPI.updateTranscript(meetingId, transcript);
-      
-      console.log('✅ Transcript saved successfully');
-      
+
+      console.log("✅ Transcript saved successfully");
+
       setMeeting((prev) => ({ ...prev, transcript }));
       return { success: true };
     } catch (err) {
-      console.error('Failed to save transcript:', err.response?.data || err.message);
+      console.error(
+        "Failed to save transcript:",
+        err.response?.data || err.message
+      );
       return {
         success: false,
-        message: err.response?.data?.message || 'Failed to save transcript',
+        message: err.response?.data?.message || "Failed to save transcript",
       };
     }
   };
 
   const completeMeeting = async () => {
     try {
+      console.log(`🏁 Completing meeting ${meetingId}...`);
       const response = await meetingsAPI.complete(meetingId);
+      console.log("✅ Meeting completed successfully:", response.data);
+
+      // Update local state with the completed meeting data
       setMeeting(response.data.meeting);
-      return { success: true };
+
+      // Also refresh from server to ensure we have latest data
+      await loadMeeting();
+
+      return { success: true, meeting: response.data.meeting };
     } catch (err) {
+      console.error("❌ Failed to complete meeting:", err);
       return {
         success: false,
-        message: err.response?.data?.message || 'Failed to complete meeting',
+        message: err.response?.data?.message || "Failed to complete meeting",
       };
     }
   };

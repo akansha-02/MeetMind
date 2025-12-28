@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { formatDate } from '../../utils/formatDate';
-import toast from 'react-hot-toast';
-import { meetingsAPI } from '../../services/api';
+import React, { useState } from "react";
+import { formatDate } from "../../utils/formatDate";
+import toast from "react-hot-toast";
+import { meetingsAPI } from "../../services/api";
 // import { MermaidDiagram } from '../summarize/MermaidDiagram';
 
 export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
@@ -9,7 +9,7 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
 
   const handleGenerateSummary = async () => {
     if (!meeting?.transcript) {
-      toast.error('No transcript available');
+      toast.error("No transcript available");
       return;
     }
 
@@ -17,17 +17,19 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
     try {
       const { data } = await meetingsAPI.generateSummary(meeting._id, {
         transcript: meeting.transcript,
-        language: meeting.language || 'en'
+        language: meeting.language || "en",
       });
-      
-      toast.success(`Summary generated${data?.provider ? ` using ${data.provider}` : ''}`);
-      
+
+      toast.success(
+        `Summary generated${data?.provider ? ` using ${data.provider}` : ""}`
+      );
+
       if (onSummaryUpdate) {
         onSummaryUpdate(data.summary);
       }
     } catch (error) {
-      toast.error(error.message || 'Failed to generate summary');
-      console.error('Summary generation error:', error);
+      toast.error(error.message || "Failed to generate summary");
+      console.error("Summary generation error:", error);
     } finally {
       setGenerating(false);
     }
@@ -39,37 +41,69 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
     <div className="space-y-6">
       {/* Meeting Details */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold mb-4">{meeting.title || 'Untitled Meeting'}</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          {meeting.title || "Untitled Meeting"}
+        </h2>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-gray-500">Status:</span>
-            <span className={`ml-2 px-2 py-1 rounded ${
-              meeting.status === 'completed' 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-yellow-100 text-yellow-800'
-            }`}>
+            <span
+              className={`ml-2 px-2 py-1 rounded ${
+                meeting.status === "completed"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}
+            >
               {meeting.status}
             </span>
           </div>
           {meeting.startTime && (
             <div>
               <span className="text-gray-500">Start Time:</span>
-              <span className="ml-2 text-gray-900">{formatDate(meeting.startTime)}</span>
+              <span className="ml-2 text-gray-900">
+                {formatDate(meeting.startTime)}
+              </span>
             </div>
           )}
           {meeting.endTime && (
             <div>
               <span className="text-gray-500">End Time:</span>
-              <span className="ml-2 text-gray-900">{formatDate(meeting.endTime)}</span>
+              <span className="ml-2 text-gray-900">
+                {formatDate(meeting.endTime)}
+              </span>
             </div>
           )}
           {meeting.language && (
             <div>
               <span className="text-gray-500">Language:</span>
-              <span className="ml-2 text-gray-900 uppercase">{meeting.language}</span>
+              <span className="ml-2 text-gray-900 uppercase">
+                {meeting.language}
+              </span>
             </div>
           )}
         </div>
+
+        {/* Participants */}
+        {meeting.participants && meeting.participants.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+              Participants ({meeting.participants.length})
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {meeting.participants.map((participant, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                >
+                  {participant.name || participant.email}
+                  {participant.status === "invited" && (
+                    <span className="ml-1 text-blue-600">• Invited</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary */}
@@ -82,7 +116,7 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
               disabled={generating}
               className="text-sm px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {generating ? 'Regenerating...' : 'Regenerate'}
+              {generating ? "Regenerating..." : "Regenerate"}
             </button>
           </div>
           <p className="text-gray-700 whitespace-pre-wrap">{meeting.summary}</p>
@@ -92,14 +126,18 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
       {/* Generate Summary if missing */}
       {!meeting.summary && meeting.transcript && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">No Summary Yet</h3>
-          <p className="text-blue-800 mb-4">Generate an AI summary of this meeting transcript.</p>
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">
+            No Summary Yet
+          </h3>
+          <p className="text-blue-800 mb-4">
+            Generate an AI summary of this meeting transcript.
+          </p>
           <button
             onClick={handleGenerateSummary}
             disabled={generating}
             className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {generating ? 'Generating Summary...' : 'Generate Summary'}
+            {generating ? "Generating Summary..." : "Generate Summary"}
           </button>
         </div>
       )}
@@ -108,7 +146,9 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
       {meeting.minutes && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-4">Meeting Minutes</h3>
-          <div className="text-gray-700 whitespace-pre-wrap">{meeting.minutes}</div>
+          <div className="text-gray-700 whitespace-pre-wrap">
+            {meeting.minutes}
+          </div>
         </div>
       )}
 
@@ -124,4 +164,3 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
     </div>
   );
 };
-
