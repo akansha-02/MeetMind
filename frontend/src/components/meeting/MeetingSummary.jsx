@@ -37,6 +37,34 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
 
   if (!meeting) return null;
 
+  const summaryText = meeting.summary || "";
+  const lines = summaryText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const cleanLine = (line) =>
+    line
+      .replace(/^-/i, "")
+      .replace(/^\s*[:*\s-]*/, "")
+      .replace(/\*\*/g, "")
+      .trim();
+
+  const topicLine =
+    lines.find((l) => /meeting summary:/i.test(l)) ||
+    lines.find((l) => /topic/i.test(l));
+
+  const topic = topicLine
+    ? cleanLine(topicLine.split(":" , 2)[1] || topicLine.replace(/meeting summary:/i, ""))
+    : meeting.title || "Untitled Meeting";
+
+  const keyPoints = lines.filter(
+    (line) =>
+      line.startsWith("-") &&
+      !/\btopic\b/i.test(line) &&
+      !/\bkey points?\b/i.test(line)
+  );
+
   return (
     <div className="space-y-6">
       {/* Meeting Details */}
@@ -119,7 +147,25 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
               {generating ? "Regenerating..." : "Regenerate"}
             </button>
           </div>
-          <p className="text-gray-700 whitespace-pre-wrap">{meeting.summary}</p>
+          <div className="space-y-3">
+            <div>
+              <span className="text-gray-500">Topic:</span>
+              <span className="ml-2 text-gray-900">{topic}</span>
+            </div>
+
+            {keyPoints.length > 0 ? (
+              <div>
+                <p className="text-gray-700 font-medium mb-2">Key Points</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
+                  {keyPoints.map((point, idx) => (
+                    <li key={idx}>{point.replace(/^-\s*/, "")}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-gray-600">No key points detected in the summary.</p>
+            )}
+          </div>
         </div>
       )}
 
@@ -139,16 +185,6 @@ export const MeetingSummary = ({ meeting, onSummaryUpdate }) => {
           >
             {generating ? "Generating Summary..." : "Generate Summary"}
           </button>
-        </div>
-      )}
-
-      {/* Meeting Minutes */}
-      {meeting.minutes && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-4">Meeting Minutes</h3>
-          <div className="text-gray-700 whitespace-pre-wrap">
-            {meeting.minutes}
-          </div>
         </div>
       )}
 

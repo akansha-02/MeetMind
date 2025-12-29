@@ -1,12 +1,13 @@
 # MeetMind - AI-Powered Meeting Assistant
 
-A full-stack web application for AI-powered meeting assistance using the MERN stack, with real-time transcription and intelligent meeting summaries powered by modern speech-to-text and language models.
+A full-stack web application for AI-powered meeting assistance using the MERN stack, with real-time transcription, intelligent meeting summaries and monthly knowledge base views powered by modern speech-to-text and language models.
 
 ## Features
 
 - 🎙️ **Real-time Transcription**: Transcribe meetings in real-time using Deepgram.
 - 📝 **AI-Powered Summaries**: Automatically generate concise summaries and meeting minutes.
 - 📚 **Knowledge Base**: Store past meetings in MongoDB Atlas and search them using Atlas Vector Search for semantic recall.
+- 📅 **Monthly View**: Showing all meetings from a selected month with detailed analytics.
 - 🌍 **Multi-language Support**: Support multi-language transcription and cultural context adaptation.
 
 ## Technology Stack
@@ -26,6 +27,7 @@ A full-stack web application for AI-powered meeting assistance using the MERN st
 - MongoDB Atlas Vector Search
 - Deepgram SDK (Speech-to-text)
 - OpenAI API (GPT for summarization and task extraction)
+- Nodemailer (Email invitations)
 - JWT Authentication
 
 ## Prerequisites
@@ -34,6 +36,7 @@ A full-stack web application for AI-powered meeting assistance using the MERN st
 - MongoDB Atlas account (with Vector Search enabled)
 - Deepgram API key
 - OpenAI API key
+- Email service credentials (SMTP for email invites)
 
 ## Installation
 
@@ -59,6 +62,8 @@ MONGODB_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_jwt_secret_here
 DEEPGRAM_API_KEY=your_deepgram_api_key
 OPENAI_API_KEY=your_openai_api_key
+EMAIL_USER=your_gmail@gmail.com
+EMAIL_PASSWORD=your_16_char_app_password
 ```
 
 ``` **How to get these values:**
@@ -73,6 +78,12 @@ Create a Deepgram account → go to the API Keys section → click Create API Ke
 
 4. OPENAI_API_KEY=your_openai_api_key
 Go to https://platform.openai.com → sign in / sign up → open the API Keys page → click Create new secret key → copy the key once and paste it here.
+
+5. EMAIL_PASSWORD=your_16_char_app_password
+→ Enable 2FA: Google Account → Security → 2-Step Verification
+→ App Passwords → Mail → "MeetMind" → Generate
+→ Copy 16-char password (remove spaces)
+→ Set EMAIL_PASSWORD=abcdefghijklmnop in .env
 
 NOTE: This project uses your own OpenAI account so if the free or paid quota is exhausted, in that case you can either:
 i. Create a new OpenAI account, generate a fresh API key, and update OPENAI_API_KEY in .env, OR
@@ -101,6 +112,7 @@ npm install
 ```env
 VITE_API_URL=http://localhost:5001/api
 VITE_SOCKET_URL=http://localhost:5001
+DEEPGRAM_API_KEY=your_deepgram_api_key
 ```
 
 4. Start the frontend development server:
@@ -119,7 +131,8 @@ AI features (transcription, summaries, knowledge base search) require valid Deep
 5. Start recording or upload an audio file
 6. View real-time transcription
 7. Complete the meeting to generate AI summaries 
-8. Search the knowledge base for past meeting context
+8. View monthly knowledge base → Filter meetings by month
+8. Search the knowledge base for context
 
 ## API Endpoints
 
@@ -136,6 +149,8 @@ AI features (transcription, summaries, knowledge base search) require valid Deep
 - `DELETE /api/meetings/:id` - Delete meeting (protected)
 - `POST /api/meetings/:id/complete` - Complete meeting and generate AI content (protected)
 - `POST /api/meetings/:id/process` - Process meeting with AI (protected)
+- `POST /api/meetings/:id/invite` - Send email invites (protected)
+- `GET /api/meetings/monthly/:year/:month` - Monthly meetings view (protected)
 
 ### Transcripts
 - `POST /api/transcripts/upload` - Upload and transcribe audio file (protected)
@@ -143,6 +158,7 @@ AI features (transcription, summaries, knowledge base search) require valid Deep
 
 ### Knowledge Base
 - `POST /api/knowledge-base/search` - Search knowledge base (protected)
+- `GET /api/knowledge-base/monthly/:year/:month` - Monthly knowledge base view
 
 ## Socket.IO Events
 
