@@ -120,6 +120,14 @@ DEEPGRAM_API_KEY=your_deepgram_api_key
 npm run dev
 ```
 
+## Quick Start
+git clone https://github.com/akansha-02/MeetMind.git
+cd MeetMind/backend && npm install
+cd MeetMind/frontend && npm install
+# create backend/.env and frontend/.env
+npm start (backend)   |   npm run dev (frontend)
+open http://localhost:5173
+
 
 ## Usage
 AI features (transcription, summaries, knowledge base search) require valid Deepgram and OpenAI keys configured in backend/.env as described above.
