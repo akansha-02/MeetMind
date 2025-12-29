@@ -29,7 +29,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || 'https://meetmind-l8qz.onrender.com',
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -40,7 +40,7 @@ initializeSocket(io);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'https://meetmind-l8qz.onrender.com',
   credentials: true,
 }));
 app.use(express.json());
