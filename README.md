@@ -121,12 +121,12 @@ npm run dev
 ```
 
 ## Quick Start
-git clone https://github.com/akansha-02/MeetMind.git
-cd MeetMind/backend && npm install
-cd MeetMind/frontend && npm install
-# create backend/.env and frontend/.env
-npm start (backend)   |   npm run dev (frontend)
-open http://localhost:5173
+1. git clone https://github.com/akansha-02/MeetMind.git
+2. cd MeetMind/backend && npm install
+3. cd MeetMind/frontend && npm install
+4. create backend/.env and frontend/.env
+  ->npm start (backend)   |   npm run dev (frontend)
+  ->open http://localhost:5173
 
 
 ## Usage
